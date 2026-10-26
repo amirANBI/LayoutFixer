@@ -100,7 +100,7 @@ Details:
   included when the word next to them is clearly wrong too.
 - The physical key codes are recorded and translated with the other layout through
   `UCKeyTranslate`, so the conversion is exact for whatever layouts you use.
-- The English word lists are a 50k-word frequency list (bundled) plus `/usr/share/dict/words`.
+- The word lists are 50k-word English and Persian frequency lists (bundled) plus `/usr/share/dict/words`.
 
 Known limits:
 
@@ -145,7 +145,7 @@ Ideas and pull requests are welcome, for example:
 
 ## Credits
 
-- English word frequencies: [FrequencyWords](https://github.com/hermitdave/FrequencyWords) by
+- English and Persian word frequencies: [FrequencyWords](https://github.com/hermitdave/FrequencyWords) by
   Hermit Dave, licensed under [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/).
   See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
