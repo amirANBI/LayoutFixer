@@ -113,17 +113,14 @@ for points in [16, 32, 128, 256, 512] {
 
 // MARK: Menu bar template (36 canvas, black on clear; macOS tints it)
 
+/// A filled key with A and ش cut out, in the style of the macOS input-source icon.
 func drawMenuBarIcon() {
-    let back = rounded(3, 13, 20, 20, 5)
-    back.lineWidth = 2.5
-    NSColor.black.setStroke()
-    back.stroke()
-    // Cut a gap around the front key so the two shapes stay readable at 18 px.
-    NSGraphicsContext.current!.compositingOperation = .clear
-    rounded(9.5, 0.5, 26, 26, 7).fill()
-    NSGraphicsContext.current!.compositingOperation = .sourceOver
     NSColor.black.setFill()
-    rounded(12, 3, 21, 21, 5).fill()
+    rounded(1, 1, 34, 34, 8).fill()
+    NSGraphicsContext.current!.compositingOperation = .destinationOut
+    text("A", font: .systemFont(ofSize: 16, weight: .heavy), color: .black, center: NSPoint(x: 11.5, y: 24.5))
+    text("ش", font: persianFont(19), color: .black, center: NSPoint(x: 24, y: 11.5))
+    NSGraphicsContext.current!.compositingOperation = .sourceOver
 }
 
 save(render(size: 18, canvas: 36, drawMenuBarIcon), "MenuBarIcon.png")
