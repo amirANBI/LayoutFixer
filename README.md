@@ -83,12 +83,15 @@ To start it at login, add it in **System Settings → General → Login Items**.
 
 ## How it works
 
-LayoutFixer only checks **English**, which keeps it simple and predictable:
+LayoutFixer only suggests a fix when the other reading is a **real word**:
 
 | You're typing on… | It flags a word when… | Suggests |
 |---|---|---|
-| Persian layout | the same keys spell a real English word (`هدسفثشی` → `instead`) | English |
-| English layout | the word isn't English (`sghl`) | Persian (`سلام`) |
+| Persian layout | the same keys spell a common English word (`هدسفثشی` → `instead`) | English |
+| English layout | it isn't an English word **and** the same keys spell a real Persian word (`sghl` → `سلام`) | Persian |
+
+So names, brands and typos (`github`, `figma`, `teh`) are never touched: their Persian reading is
+gibberish.
 
 Details:
 
@@ -101,7 +104,6 @@ Details:
 
 Known limits:
 
-- An English typo like `teh` may get a "switch to Persian" popup. <kbd>Esc</kbd> dismisses it.
 - The popup is placed at the text cursor via the Accessibility API. Apps that don't report the
   cursor position (some Electron apps) get it at the mouse pointer instead.
 - macOS blocks key monitoring in password fields (Secure Input), so it never runs there.

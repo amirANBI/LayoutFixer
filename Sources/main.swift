@@ -67,45 +67,72 @@ func currentLayout() -> Layout? {
 
 // MARK: - Dictionaries
 
-/// Only English is checked: a word is English if it is in the English lists, and anything
-/// typed on the English layout that isn't English is assumed to be meant as Persian.
+/// Decides whether a word was typed on the wrong layout, in either direction.
+/// A suggestion is only made when the other reading is a real word, so names, brands
+/// and typos ("github", "teh") are left alone.
 final class Dictionaries {
-    /// Common English words (subtitle frequency list) — used to accept a conversion to English.
-    private var common: Set<String> = []
-    /// Every English word we know, including rare ones — used to avoid flagging real English.
-    private var all: Set<String> = []
+    /// Rank in the English frequency list (0 = most common).
+    private var enRank: [String: Int] = [:]
+    /// Rank in the Persian frequency list.
+    private var faRank: [String: Int] = [:]
+    /// Every English word we know, including rare ones from /usr/share/dict/words.
+    private var enAll: Set<String> = []
+    /// Only the most common Persian words count as a real reading; the long tail of the list is noisy.
+    private let faLimit = 30000
 
     init(directory: URL) {
-        if let text = try? String(contentsOf: directory.appendingPathComponent("en_50k.txt"), encoding: .utf8) {
-            for line in text.split(separator: "\n") {
-                if let word = line.split(separator: " ").first { common.insert(Dictionaries.normalize(String(word))) }
-            }
-        }
-        all = common
+        enRank = Dictionaries.load(directory.appendingPathComponent("en_50k.txt"))
+        faRank = Dictionaries.load(directory.appendingPathComponent("fa_50k.txt"))
+        enAll = Set(enRank.keys)
         if let text = try? String(contentsOfFile: "/usr/share/dict/words", encoding: .utf8) {
-            for line in text.split(separator: "\n") { all.insert(line.lowercased()) }
+            for line in text.split(separator: "\n") { enAll.insert(line.lowercased()) }
         }
     }
 
+    private static func load(_ url: URL) -> [String: Int] {
+        guard let text = try? String(contentsOf: url, encoding: .utf8) else { return [:] }
+        var ranks: [String: Int] = [:]
+        for (i, line) in text.split(separator: "\n").enumerated() {
+            guard let word = line.split(separator: " ").first else { continue }
+            let w = normalize(String(word))
+            if ranks[w] == nil { ranks[w] = i }
+        }
+        return ranks
+    }
+
     static func normalize(_ s: String) -> String {
-        s.lowercased().trimmingCharacters(in: .punctuationCharacters.union(.symbols).union(.whitespaces))
+        s.lowercased()
+            .replacingOccurrences(of: "ي", with: "ی")
+            .replacingOccurrences(of: "ك", with: "ک")
+            .trimmingCharacters(in: .punctuationCharacters.union(.symbols).union(.whitespaces))
+    }
+
+    private func persianRank(_ s: String) -> Int? {
+        guard let r = faRank[Dictionaries.normalize(s)], r < faLimit else { return nil }
+        return r
     }
 
     /// True when the word was typed on the wrong layout.
     /// `minLetters` guards against short words, which are often ambiguous (شد is "an" on English keys).
     func isMistake(typed: String, typedLang: String, converted: String, minLetters: Int = 3) -> Bool {
         if typedLang == "fa" {
+            // Typed on Persian keys: the English reading must be a common English word,
+            // and more common than the Persian word itself if the typed text is real Persian.
             let english = Dictionaries.normalize(converted)
-            return english.count >= minLetters && english.allSatisfy(\.isASCII) && common.contains(english)
+            guard english.count >= minLetters, english.allSatisfy(\.isASCII), let en = enRank[english] else { return false }
+            if let fa = persianRank(typed) { return en < fa }
+            return true
         }
-        // , ; ' [ ] are Persian letters (و ک گ ج چ) on English keys, so they can sit inside the word.
+        // Typed on English keys: never touch a real English word, and only suggest Persian
+        // when the Persian reading is a real Persian word. ", ; ' [ ]" are Persian letters on
+        // English keys (و ک گ ج چ), so they can sit inside the word.
         let english = Dictionaries.normalize(typed)
         let persianKeys = Set(",;'[]")
         guard english.count >= minLetters, english.allSatisfy({ $0.isLetter || persianKeys.contains($0) }),
-              english.contains(where: \.isLetter), !all.contains(english) else { return false }
+              english.contains(where: \.isLetter), !enAll.contains(english) else { return false }
         // don't, it's, ...
-        if let stem = english.split(separator: "'").first, english.contains("'"), all.contains(String(stem)) { return false }
-        return true
+        if let stem = english.split(separator: "'").first, english.contains("'"), enAll.contains(String(stem)) { return false }
+        return persianRank(converted) != nil
     }
 }
 
