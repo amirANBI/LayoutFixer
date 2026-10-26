@@ -42,6 +42,20 @@ other way too: `sghl` → `سلام`.
 You need macOS 13 or later, and both an English and a Persian keyboard layout enabled in
 **System Settings → Keyboard → Text Input**.
 
+### Download
+
+1. Download `LayoutFixer-x.y.z.zip` from the
+   [latest release](https://github.com/sina-developer/LayoutFixer/releases/latest) and unzip it.
+2. Move `LayoutFixer.app` to **Applications**.
+3. The app isn't notarized by Apple yet, so macOS blocks the first launch. Either:
+   - open it once, then go to **System Settings → Privacy & Security** and click **Open Anyway**, or
+   - run this in Terminal:
+     ```bash
+     xattr -dr com.apple.quarantine /Applications/LayoutFixer.app
+     ```
+
+Runs on Apple silicon and Intel Macs.
+
 ### Build from source
 
 ```bash

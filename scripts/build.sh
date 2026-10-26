@@ -24,10 +24,18 @@ cat > $APP/Contents/Info.plist <<PLIST
   <key>NSHumanReadableCopyright</key><string>MIT License</string>
 </dict></plist>
 PLIST
-swiftc -O Sources/main.swift -o $APP/Contents/MacOS/LayoutFixer -framework Cocoa -framework Carbon
+# Universal binary: Apple silicon and Intel.
+for ARCH in arm64 x86_64; do
+  swiftc -O -target $ARCH-apple-macos13.0 Sources/main.swift -o build/LayoutFixer-$ARCH \
+    -framework Cocoa -framework Carbon
+done
+lipo -create build/LayoutFixer-arm64 build/LayoutFixer-x86_64 -output $APP/Contents/MacOS/LayoutFixer
+rm build/LayoutFixer-arm64 build/LayoutFixer-x86_64
+xattr -cr $APP
 codesign --force --sign - $APP
 if [[ "$1" == "--zip" ]]; then
-  (cd build && ditto -c -k --keepParent LayoutFixer.app LayoutFixer-$VERSION.zip)
+  rm -f build/LayoutFixer-$VERSION.zip
+  (cd build && ditto -c -k --norsrc --noextattr --keepParent LayoutFixer.app LayoutFixer-$VERSION.zip)
   echo "built build/LayoutFixer-$VERSION.zip"
 fi
 echo "built $APP"
