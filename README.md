@@ -1,12 +1,14 @@
 <p align="center">
-  <img src="icon/icon_1024.png" width="160" alt="LayoutFixer icon">
+  <img src="assets/cover.png" alt="LayoutFixer: typed in the wrong layout? Just press Tab. A popup suggests 'this instead' for the mistyped Persian text فاهس هدسفثشی.">
 </p>
-
-<h1 align="center">LayoutFixer</h1>
 
 <p align="center">
   Typed a whole sentence with the wrong keyboard layout? Press <kbd>Tab</kbd>.<br>
   A tiny macOS menu bar app that fixes English ⇄ Persian layout mistakes as you type.
+</p>
+
+<p align="center">
+  <a href="https://github.com/sina-developer/LayoutFixer/releases/latest"><b>Download for macOS</b></a>
 </p>
 
 ---
@@ -120,6 +122,7 @@ The whole app is one file, [`Sources/main.swift`](Sources/main.swift). You can r
 Sources/main.swift      the app: event tap, detection, popup, menu bar
 Resources/              word list, app icon, menu bar icon
 icon/make_icon.swift    draws the icons (run scripts/make-icons.sh)
+icon/make_cover.swift   draws assets/cover.png and social-preview.png
 scripts/build.sh        builds build/LayoutFixer.app (--zip for a release zip)
 ```
 
