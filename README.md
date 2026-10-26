@@ -45,7 +45,7 @@ You need macOS 13 or later, and both an English and a Persian keyboard layout en
 ### Build from source
 
 ```bash
-git clone https://github.com/<you>/LayoutFixer.git
+git clone https://github.com/sina-developer/LayoutFixer.git
 cd LayoutFixer
 ./scripts/build.sh
 open build/LayoutFixer.app
