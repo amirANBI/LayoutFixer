@@ -1,0 +1,135 @@
+<p align="center">
+  <img src="icon/icon_1024.png" width="160" alt="LayoutFixer icon">
+</p>
+
+<h1 align="center">LayoutFixer</h1>
+
+<p align="center">
+  Typed a whole sentence with the wrong keyboard layout? Press <kbd>Tab</kbd>.<br>
+  A tiny macOS menu bar app that fixes English ⇄ Persian layout mistakes as you type.
+</p>
+
+---
+
+You meant to write:
+
+```
+this instead of writing it in english
+```
+
+but the keyboard was still on Persian, so you got:
+
+```
+فاهس هدسفثشی خب صقهفهدل هف هد ثدلمهسا
+```
+
+LayoutFixer notices, shows a small popup next to your cursor, and when you press <kbd>Tab</kbd> it
+retypes the text in the right language **and switches your keyboard layout** for you. It works the
+other way too: `sghl` → `سلام`.
+
+## Features
+
+- Works in every app: browsers, chat apps, editors, mail.
+- Asks before changing anything. <kbd>Tab</kbd> fixes it, <kbd>Esc</kbd> (or just keep typing) ignores it.
+- Fixes the whole run of wrong words, not just the last one.
+- Switches the active input source so the next words come out right.
+- Reads your real keyboard layouts (ABC, US, Persian, Persian-ISIRI 2901, …), so the key mapping
+  always matches your keyboard.
+- Fully offline. Nothing is stored or sent anywhere.
+
+## Install
+
+You need macOS 13 or later, and both an English and a Persian keyboard layout enabled in
+**System Settings → Keyboard → Text Input**.
+
+### Build from source
+
+```bash
+git clone https://github.com/<you>/LayoutFixer.git
+cd LayoutFixer
+./scripts/build.sh
+open build/LayoutFixer.app
+```
+
+Only the Xcode Command Line Tools are needed (`xcode-select --install`). Xcode itself isn't.
+
+### First launch
+
+LayoutFixer needs **Accessibility** permission to see what you type and to retype corrections.
+macOS will ask on first launch. Turn on **LayoutFixer** in
+**System Settings → Privacy & Security → Accessibility**. It starts working within a couple of
+seconds, with no restart needed.
+
+> The build is ad-hoc signed. After rebuilding, macOS may treat it as a new app: switch the
+> Accessibility toggle off and on again.
+
+To start it at login, add it in **System Settings → General → Login Items**.
+
+## How it works
+
+LayoutFixer only checks **English**, which keeps it simple and predictable:
+
+| You're typing on… | It flags a word when… | Suggests |
+|---|---|---|
+| Persian layout | the same keys spell a real English word (`هدسفثشی` → `instead`) | English |
+| English layout | the word isn't English (`sghl`) | Persian (`سلام`) |
+
+Details:
+
+- Words are checked when you press <kbd>Space</kbd>.
+- 2-letter words are ambiguous (the Persian word `شد` is `an` on English keys), so they're only
+  included when the word next to them is clearly wrong too.
+- The physical key codes are recorded and translated with the other layout through
+  `UCKeyTranslate`, so the conversion is exact for whatever layouts you use.
+- The English word lists are a 50k-word frequency list (bundled) plus `/usr/share/dict/words`.
+
+Known limits:
+
+- An English typo like `teh` may get a "switch to Persian" popup. <kbd>Esc</kbd> dismisses it.
+- The popup is placed at the text cursor via the Accessibility API. Apps that don't report the
+  cursor position (some Electron apps) get it at the mouse pointer instead.
+- macOS blocks key monitoring in password fields (Secure Input), so it never runs there.
+
+## Privacy
+
+This is a keyboard monitor, so here is exactly what it does:
+
+- It keeps only the last few words you typed, in memory, to check them and retype them.
+- The buffer is cleared when you click, use arrow keys, use shortcuts, or switch apps.
+- Nothing is written to disk, logged, or sent over the network. The app makes no network requests.
+
+The whole app is one file, [`Sources/main.swift`](Sources/main.swift). You can read all of it.
+
+## Development
+
+```
+Sources/main.swift      the app: event tap, detection, popup, menu bar
+Resources/              word list, app icon, menu bar icon
+icon/make_icon.swift    draws the icons (run scripts/make-icons.sh)
+scripts/build.sh        builds build/LayoutFixer.app (--zip for a release zip)
+```
+
+You can test detection without the app running:
+
+```bash
+./build/LayoutFixer.app/Contents/MacOS/LayoutFixer --test "فاهس هدسفثشی"
+# فاهس -> this  FIX
+# هدسفثشی -> instead  FIX
+```
+
+Ideas and pull requests are welcome, for example:
+
+- More language pairs (Arabic, Russian, Hebrew, …)
+- A settings window (auto-fix without asking, per-app exclusions)
+- Learning from words you dismiss
+- A signed and notarized release
+
+## Credits
+
+- English word frequencies: [FrequencyWords](https://github.com/hermitdave/FrequencyWords) by
+  Hermit Dave, licensed under [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/).
+  See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
+## License
+
+[MIT](LICENSE)
