@@ -1,0 +1,48 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <!-- WinForms, because the app is a tray icon and one borderless window. -->
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+
+    <AssemblyName>LayoutFixer</AssemblyName>
+    <RootNamespace>LayoutFixer</RootNamespace>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>../../Resources/AppIcon.ico</ApplicationIcon>
+
+    <Version>0.1.0</Version>
+    <Product>LayoutFixer</Product>
+    <Company>Sina Gholizadeh</Company>
+    <Authors>Sina Gholizadeh</Authors>
+    <Copyright>MIT License</Copyright>
+    <Description>Fixes English and Persian keyboard layout mistakes while you type.</Description>
+
+    <!-- Any CPU is fine to build; publishing picks a runtime identifier and produces one exe. -->
+    <RuntimeIdentifiers>win-x64;win-arm64</RuntimeIdentifiers>
+    <SelfContained Condition="'$(RuntimeIdentifier)' != '' And '$(FrameworkDependent)' != 'true'">true</SelfContained>
+    <PublishSingleFile Condition="'$(RuntimeIdentifier)' != '' And '$(FrameworkDependent)' != 'true'">true</PublishSingleFile>
+    <PublishReadyToRun>false</PublishReadyToRun>
+    <DebugType>portable</DebugType>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <InvariantGlobalization>false</InvariantGlobalization>
+    <!-- Set to true to drop about 30 MB of ICU from the self-contained build. The app only uses
+         invariant casing, so it is safe, but it is off by default to keep behaviour identical. -->
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Word lists and icons live inside the exe: the app is one file, with nothing to install. -->
+    <EmbeddedResource Include="../../Resources/en_50k.txt" LogicalName="LayoutFixer.en_50k.txt" />
+    <EmbeddedResource Include="../../Resources/fa_50k.txt" LogicalName="LayoutFixer.fa_50k.txt" />
+    <EmbeddedResource Include="../../Resources/TrayIcon.ico" LogicalName="LayoutFixer.TrayIcon.ico" />
+    <EmbeddedResource Include="../../Resources/TrayIconPaused.ico" LogicalName="LayoutFixer.TrayIconPaused.ico" />
+  </ItemGroup>
+
+</Project>

@@ -1,6 +1,13 @@
+# LayoutFixer for Windows — build output, .NET intermediates, Python leftovers
+
 build/
+bin/
+obj/
+*.user
+*.suo
+.vs/
+.vscode/
+__pycache__/
+*.pyc
+Thumbs.db
 .DS_Store
-*.xcuserstate
-xcuserdata/
-/promo/
-/Resources/

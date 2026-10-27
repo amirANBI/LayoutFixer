@@ -1,11 +1,10 @@
-#!/bin/zsh
-# Regenerates the app icon and menu bar icon from icon/make_icon.swift.
+#!/bin/sh
+# Regenerates the icons in Resources/ from icon/make_icon.py. Works on any OS (the icons are PNG
+# frames packed into .ico), so you can also run it from macOS or WSL:
+#
+#   ./scripts/make-icons.sh
+#
+# Needs Python 3 with Pillow: python3 -m pip install pillow arabic-reshaper python-bidi
 set -e
 cd "$(dirname "$0")/.."
-TMP=$(mktemp -d)
-swift icon/make_icon.swift "$TMP"
-iconutil -c icns "$TMP/AppIcon.iconset" -o Resources/AppIcon.icns
-cp "$TMP"/MenuBarIcon.png "$TMP"/MenuBarIcon@2x.png Resources/
-cp "$TMP"/icon_1024.png icon/icon_1024.png
-rm -rf "$TMP"
-echo "icons updated"
+python3 icon/make_icon.py .
