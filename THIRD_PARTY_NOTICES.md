@@ -9,3 +9,10 @@ derived from OpenSubtitles data.
 Licensed under the Creative Commons Attribution-ShareAlike 4.0 International License
 (https://creativecommons.org/licenses/by-sa/4.0/). The files are included unmodified.
 The MIT license of this project does not apply to these files.
+
+## promo/fonts
+
+- **Inter** by Rasmus Andersson (https://rsms.me/inter/), licensed under the SIL Open Font License 1.1.
+- **Vazirmatn** by Saber Rastikerdar (https://github.com/rastikerdar/vazirmatn), licensed under the SIL Open Font License 1.1.
+
+Both are used only to render the demo video and are included unmodified, from the Fontsource packages.

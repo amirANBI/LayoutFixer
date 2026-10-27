@@ -11,18 +11,33 @@
   <a href="https://github.com/sina-developer/LayoutFixer/releases/latest"><b>Download for macOS</b></a>
 </p>
 
+## See it in action
+
+<p align="center">
+  <a href="https://github.com/sina-developer/LayoutFixer/releases/download/v0.1.0/layoutfixer-16x9.mp4">
+    <img src="assets/demo.gif" width="800" alt="LayoutFixer demo: a message typed on the Persian layout is detected, a popup suggests 'want to grab lunch today', Tab fixes it and switches the keyboard to English.">
+  </a>
+</p>
+
+<p align="center">
+  Watch with sound:
+  <a href="https://github.com/sina-developer/LayoutFixer/releases/download/v0.1.0/layoutfixer-16x9.mp4">16:9</a> ·
+  <a href="https://github.com/sina-developer/LayoutFixer/releases/download/v0.1.0/layoutfixer-9x16.mp4">9:16</a> ·
+  <a href="https://github.com/sina-developer/LayoutFixer/releases/download/v0.1.0/layoutfixer-4x3.mp4">4:3</a>
+</p>
+
 ---
 
 You meant to write:
 
 ```
-this instead of writing it in english
+want to grab lunch today
 ```
 
 but the keyboard was still on Persian, so you got:
 
 ```
-فاهس هدسفثشی خب صقهفهدل هف هد ثدلمهسا
+صشدف فخ لقشذ معدزا فخیشغ
 ```
 
 LayoutFixer notices, shows a small popup next to your cursor, and when you press <kbd>Tab</kbd> it
@@ -87,7 +102,7 @@ LayoutFixer only suggests a fix when the other reading is a **real word**:
 
 | You're typing on… | It flags a word when… | Suggests |
 |---|---|---|
-| Persian layout | the same keys spell a common English word (`هدسفثشی` → `instead`) | English |
+| Persian layout | the same keys spell a common English word (`صشدف` → `want`) | English |
 | English layout | it isn't an English word **and** the same keys spell a real Persian word (`sghl` → `سلام`) | Persian |
 
 So names, brands and typos (`github`, `figma`, `teh`) are never touched: their Persian reading is
@@ -125,15 +140,17 @@ Sources/main.swift      the app: event tap, detection, popup, menu bar
 Resources/              word list, app icon, menu bar icon
 icon/make_icon.swift    draws the icons (run scripts/make-icons.sh)
 icon/make_cover.swift   draws assets/cover.png and social-preview.png
+promo/                  the demo video: motion.html (scene), soundtrack.js, render.mjs
 scripts/build.sh        builds build/LayoutFixer.app (--zip for a release zip)
 ```
 
 You can test detection without the app running:
 
 ```bash
-./build/LayoutFixer.app/Contents/MacOS/LayoutFixer --test "فاهس هدسفثشی"
-# فاهس -> this  FIX
-# هدسفثشی -> instead  FIX
+./build/LayoutFixer.app/Contents/MacOS/LayoutFixer --test "صشدف لقشذ معدزا"
+# صشدف -> want  FIX
+# لقشذ -> grab  FIX
+# معدزا -> lunch  FIX
 ```
 
 Ideas and pull requests are welcome, for example:
