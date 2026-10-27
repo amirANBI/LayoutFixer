@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<assembly manifestVersion="1.0" xmlns="urn:schemas-microsoft-com:asm.v1">
+  <assemblyIdentity version="1.0.0.0" name="LayoutFixer.app" type="win32" />
+
+  <trustInfo xmlns="urn:schemas-microsoft-com:asm.v2">
+    <security>
+      <requestedPrivileges xmlns="urn:schemas-microsoft-com:asm.v3">
+        <!--
+          asInvoker, on purpose. A keyboard hook does not need administrator rights; uiAccess
+          (the flag that lets a normal window send input to secure screens) would require a
+          Authenticode signature and a location under Program Files. LayoutFixer stays out of it.
+          Apps that run elevated only see an elevated LayoutFixer, which is a choice you make by
+          starting it from an elevated terminal, not something the manifest forces on anyone.
+        -->
+        <requestedExecutionLevel level="asInvoker" uiAccess="false" />
+      </requestedPrivileges>
+    </security>
+  </trustInfo>
+
+  <compatibility xmlns="urn:schemas-microsoft-com:compatibility.v1">
+    <application>
+      <!-- Windows 10 and Windows 11 -->
+      <supportedOS Id="{8e0f7a12-bfb3-4fe8-b9a5-48fd50a15a9a}" />
+    </application>
+  </compatibility>
+
+  <!--
+    No <dpiAwareness> here on purpose. The popup is placed in device pixels, so the app does need
+    PerMonitorV2 - but a manifest DPI declaration and Application.SetHighDpiMode (see Program.cs)
+    are not allowed to disagree, and the WinForms analyzer says "warning WFAC010" when both are
+    present. The API call is the supported one for .NET 8, so the manifest stays out of it.
+  -->
+</assembly>
