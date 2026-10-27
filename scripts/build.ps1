@@ -47,6 +47,32 @@ function Invoke-DotNet {
     $output | ForEach-Object { Write-Host $_ }
     return $code
 }
+# Compress-Archive is the obvious call here, and a bad one: it is slow on a 140 MB payload, its
+# behaviour differs between Windows PowerShell and pwsh, and a failure inside it surfaces as
+# nothing but a nonzero exit code. The .NET zip API is the same thing, in both shells, with errors.
+function New-Zip {
+    param([string]$Source, [string]$Destination, [switch]$SingleFile)
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    $archive = [System.IO.Compression.ZipFile]::Open($Destination, [System.IO.Compression.ZipArchiveMode]::Create)
+    try {
+        if ($SingleFile) {
+            $exe = Join-Path $Source "LayoutFixer.exe"
+            [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($archive, $exe, "LayoutFixer.exe",
+                [System.IO.Compression.CompressionLevel]::Optimal) | Out-Null
+        } else {
+            foreach ($file in Get-ChildItem -LiteralPath $Source -File -Recurse) {
+                $relative = $file.FullName.Substring($Source.Length + 1).Replace('\', '/')
+                $entry = $archive.CreateEntry($relative, [System.IO.Compression.CompressionLevel]::Optimal)
+                $entryStream = $entry.Open()
+                $fileStream = [System.IO.File]::OpenRead($file.FullName)
+                try { $fileStream.CopyTo($entryStream) } finally { $fileStream.Dispose(); $entryStream.Dispose() }
+            }
+        }
+    } finally {
+        $archive.Dispose()
+    }
+}
+
 $Root = Split-Path -Parent $PSScriptRoot
 $Project = Join-Path $Root "Sources/LayoutFixer/LayoutFixer.csproj"
 $BuildDir = Join-Path $Root "build"
@@ -89,13 +115,11 @@ if ($Zip) {
     $zip = Join-Path $BuildDir "LayoutFixer-$Version-win-$Arch.zip"
     if (Test-Path $zip) { Remove-Item -Force $zip }
     if ($FrameworkDependent) {
-        # A framework-dependent build is a handful of files that belong next to each other.
-        Compress-Archive -Path (Join-Path $PublishDir "*") -DestinationPath $zip
+        New-Zip -Source $PublishDir -Destination $zip
     } else {
-        # Single file: the zip holds exactly one exe, like the macOS build's zip holds one .app.
-        Compress-Archive -Path $exe -DestinationPath $zip
+        New-Zip -Source $PublishDir -Destination $zip -SingleFile
     }
-    Write-Host "built $zip" -ForegroundColor Green
+    Write-Host "built $zip ($([math]::Round((Get-Item $zip).Length / 1MB, 1)) MB)" -ForegroundColor Green
 }
 
 if ($Test) {
