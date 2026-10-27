@@ -76,6 +76,7 @@ function New-Zip {
 $Root = Split-Path -Parent $PSScriptRoot
 $Project = Join-Path $Root "Sources/LayoutFixer/LayoutFixer.csproj"
 $BuildDir = Join-Path $Root "build"
+New-Item -ItemType Directory -Force -Path $BuildDir | Out-Null   # the log and the zip go here
 $PublishDir = Join-Path $BuildDir "publish-win-$Arch"
 
 Set-Location $Root

@@ -26,11 +26,13 @@ jobs:
       # visible as "exit code 1" - see the "explain a failed build" step.
       - name: build (self-contained, win-x64)
         shell: pwsh
-        run: ./scripts/build.ps1 -Zip *>&1 | Tee-Object -FilePath build/step-x64.log
+        run: New-Item -ItemType Directory -Force build | Out-Null
+          ./scripts/build.ps1 -Zip *>&1 | Tee-Object -FilePath build/step-x64.log
 
       - name: build (win-arm64)
         shell: pwsh
-        run: ./scripts/build.ps1 -Arch arm64 -Zip *>&1 | Tee-Object -FilePath build/step-arm64.log
+        run: New-Item -ItemType Directory -Force build | Out-Null
+          ./scripts/build.ps1 -Arch arm64 -Zip *>&1 | Tee-Object -FilePath build/step-arm64.log
 
       - name: detection smoke test
         shell: pwsh
@@ -84,7 +86,6 @@ jobs:
           }
 
       - name: upload the zips
-        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: layoutfixer-windows
