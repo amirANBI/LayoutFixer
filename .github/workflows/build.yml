@@ -48,7 +48,8 @@ jobs:
               @{ Args = '--test "صشدف فخ لقشذ"'; Expect = "صشدف -> want" },
               @{ Args = '--test "sghl"';           Expect = "sghl -> سلام" }
           )) {
-            $log = Join-Path $PWD "build/step-smoke-" + ($case.Expect -replace "[^A-Za-z]", "") + ".log"
+            $caseName = ($case.Expect -replace "[^A-Za-z]", "")
+  $log = Join-Path $PWD "build/step-smoke-$caseName.log"
             Start-Process -FilePath $exe -ArgumentList $case.Args -NoNewWindow -Wait `
                           -RedirectStandardOutput $log
             $out = Get-Content -LiteralPath $log -Raw
@@ -76,7 +77,7 @@ jobs:
           # Whatever failed, its own words are in build/step-*.log; annotate the tail so the run is
           # readable without opening the raw log, and list what the build directory ended up with.
           # -Include needs a wildcard in -Path to apply at all, so filter by name instead.
-$logs = @(Get-ChildItem -Path build -File -Recurse -ErrorAction SilentlyContinue |
+          $logs = @(Get-ChildItem -Path build -File -Recurse -ErrorAction SilentlyContinue |
           Where-Object { $_.Name -like '*.log' })
           if (-not $logs) { "::error::no step log was written: the shell could not even start the script" }
           foreach ($log in $logs) {
