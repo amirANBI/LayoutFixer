@@ -25,6 +25,28 @@ param(
 
 $ErrorActionPreference = "Stop"
 $Version = "0.1.0"
+
+# pwsh turns a native command's stderr into a terminating error while $ErrorActionPreference is
+# Stop, and MSBuild writes plenty to stderr on a build that is perfectly fine. So the tool is
+# judged by its exit code, and its whole output is kept in build\publish-win-<arch>.log for CI to
+# point at.
+function Invoke-DotNet {
+    param([string[]]$Arguments, [string]$LogFile)
+    $output = @()
+    $code = 0
+    $global:ErrorActionPreference = "Continue"
+    # Same trap, newer pwsh: this preference makes a nonzero native exit code a PowerShell error.
+    $global:PSNativeCommandUseErrorActionPreference = $false
+    try {
+        $output = & dotnet @Arguments 2>&1 | ForEach-Object { "$_" }
+        $code = $LASTEXITCODE
+    } finally {
+        $global:ErrorActionPreference = "Stop"
+    }
+    if ($LogFile) { $output | Set-Content -LiteralPath $LogFile -Encoding utf8 }
+    $output | ForEach-Object { Write-Host $_ }
+    return $code
+}
 $Root = Split-Path -Parent $PSScriptRoot
 $Project = Join-Path $Root "Sources/LayoutFixer/LayoutFixer.csproj"
 $BuildDir = Join-Path $Root "build"
@@ -54,8 +76,9 @@ if ($FrameworkDependent) {
 }
 
 Write-Host "dotnet $($arguments -join ' ')" -ForegroundColor DarkGray
-& dotnet @arguments
-if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed" }
+$publishLog = Join-Path $BuildDir "publish-win-$Arch.log"
+$code = Invoke-DotNet -Arguments $arguments -LogFile $publishLog
+if ($code -ne 0) { throw "dotnet publish failed with exit code $code; see $publishLog" }
 
 $exe = Join-Path $PublishDir "LayoutFixer.exe"
 if (-not (Test-Path $exe)) { throw "no LayoutFixer.exe in $PublishDir" }

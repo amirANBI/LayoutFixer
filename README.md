@@ -8,7 +8,9 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/sina-developer/LayoutFixer/releases/latest"><b>Download for Windows</b></a>
+  <a href="https://github.com/amirANBI/LayoutFixer/releases/latest"><b>Download for Windows</b></a>
+  &nbsp;·&nbsp;
+  <a href="https://github.com/amirANBI/LayoutFixer/actions/workflows/build.yml">latest CI build</a>
 </p>
 
 ## See it in action
@@ -55,8 +57,12 @@ You need Windows 10 or 11, and both an English and a Persian keyboard added in
 ### Download
 
 1. Download `LayoutFixer-x.y.z-win-x64.zip` from the
-   [latest release](https://github.com/sina-developer/LayoutFixer/releases/latest) and unzip it
+   [latest release](https://github.com/amirANBI/LayoutFixer/releases/latest) and unzip it
    somewhere permanent — not inside a temp folder. On Windows on Arm, take the `win-arm64` zip.
+   Until a release is published, the same zips are build artifacts: open the
+   [latest workflow run](https://github.com/amirANBI/LayoutFixer/actions/workflows/build.yml),
+   pick a run, and download `LayoutFixer-win-x64` under **Artifacts** (a signed-in GitHub account
+   is required for artifacts).
 2. Double-click `LayoutFixer.exe`. Windows may warn that the app is not from the Store: choose
    **More info → Run anyway** (the build is not Authenticode-signed yet).
 3. It sits in the notification area. Double-click the icon to pause and resume; right-click it for
@@ -68,7 +74,7 @@ There is no installer and no service. The exe writes nothing to your files and, 
 ### Build from source
 
 ```powershell
-git clone https://github.com/sina-developer/LayoutFixer.git
+git clone https://github.com/amirANBI/LayoutFixer.git
 cd LayoutFixer
 .\scripts\build.ps1
 build\publish-win-x64\LayoutFixer.exe
@@ -181,6 +187,15 @@ this also runs in CI (see [`.github/workflows/build.yml`](.github/workflows/buil
 - An MSIX or Inno Setup installer, and an Authenticode-signed release
 - Layouts whose letters need a dead key (French, Portuguese), where the current scan-code reading is
   approximate
+
+## The macOS original
+
+This is the Windows edition of [LayoutFixer for macOS](https://github.com/sina-developer/LayoutFixer).
+Same idea and the same detection rules, different plumbing: the macOS app reads the accessibility API
+and injects `CGEvent`s, this one watches a low-level keyboard hook and injects `SendInput`, and the
+layout pair comes from the Windows keyboard layouts instead of TISInputSource. The Persian keyboard it
+converts through is the built-in **Persian** layout (`KBDFA.DLL`) — if you use *Persian (Standard)*
+instead, letters still match but a few of the punctuation keys differ.
 
 ## Credits
 

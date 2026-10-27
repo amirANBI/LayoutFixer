@@ -48,6 +48,24 @@ jobs:
           Get-Content $log
           if ((Get-Content $log -Raw) -notmatch "sghl -> سلام") { throw "wrong reading for the English layout" }
 
+      - name: explain a failed build
+        if: failure()
+        shell: pwsh
+        run: |
+          # The build log is not reachable from a fork's UI in every case, and an MSBuild error that
+          # the problem matcher does not know becomes invisible. Re-emit what matters as annotations.
+          $logs = Get-ChildItem -Path build -Filter 'publish-win-*.log' -ErrorAction SilentlyContinue
+          if (-not $logs) { "::error::no build log was written: scripts/build.ps1 failed before compiling" }
+          foreach ($log in $logs) {
+            $hits = Select-String -Path $log.FullName -Pattern 'error|failed|Exception|warning [A-Z]+[0-9]+' |
+                    Select-Object -Last 20
+            if (-not $hits) { $hits = Get-Content $log.FullName | Select-Object -Last 12 }
+            foreach ($line in $hits) {
+              $text = if ($line.Line) { $line.Line } else { "$line" }
+              "::error::" + ($log.Name + ": " + $text -replace '%','%25' -replace '[^\x20-\x7E]','?')
+            }
+          }
+
       - name: upload the zips
         uses: actions/upload-artifact@v4
         with:
