@@ -10,8 +10,8 @@
 # Needs the .NET 8 SDK and nothing else:  winget install Microsoft.DotNet.SDK.8
 # Visual Studio is not required; the app has no designer files and no NuGet dependencies.
 #
-# Every message this script writes goes to build\build-win-<arch>.log as well as to the console, and
-# a failure is recorded there with its full exception, because a build that dies quietly is useless.
+# Every line this script writes also goes to build\build-win-<arch>.log, and a failure is recorded
+# there with its exception text - which matters, because a build that dies quietly is useless.
 
 param(
     [ValidateSet("x64", "arm64")]
@@ -35,7 +35,6 @@ $BuildDir = Join-Path $Root "build"
 $PublishDir = Join-Path $BuildDir "publish-win-$Arch"
 $Transcript = Join-Path $BuildDir "build-win-$Arch.log"
 New-Item -ItemType Directory -Force -Path $BuildDir | Out-Null
-Set-Content -LiteralPath $Transcript -Value "build-win-$Arch : $(Get-Date -Format 'o')" -Encoding utf8
 
 function Say {
     param([string]$Message, [string]$Color)
@@ -44,76 +43,63 @@ function Say {
 }
 
 # pwsh makes a native command's stderr a terminating error while $ErrorActionPreference is Stop, and
-# MSBuild writes plenty of harmless things there. So dotnet is judged only by its exit code, and its
-# output is kept in the same log for CI to point at.
-function Invoke-DotNet {
-    param([string[]]$Arguments)
+# MSBuild writes plenty of harmless things there. So the tool is judged only by its exit code, and
+# its output goes through Say, so that the log holds what the console held.
+function Invoke-Tool {
+    param([string]$Exe, [string[]]$Arguments)
     $output = @()
     $code = 1
     $previous = $ErrorActionPreference
     $global:ErrorActionPreference = "Continue"
     try {
-        $output = & dotnet @Arguments 2>&1 | ForEach-Object { "$_" }
+        $output = & $Exe @Arguments 2>&1
         $code = $LASTEXITCODE
     } finally {
         $global:ErrorActionPreference = $previous
     }
-    foreach ($line in $output) { Say $line }
+    foreach ($line in $output) { Say "$line" }
     return $code
-}
-
-# A freshly published 140 MB exe is often still being scanned by Windows Defender, which keeps a
-# plain open-for-read from succeeding for a moment. Share::ReadWrite plus retries is what survives
-# that; Compress-Archive just fails, and says so only on a stream the caller cannot see.
-function Open-ForRead {
-    param([string]$Path)
-    for ($attempt = 1; $attempt -le 20; $attempt++) {
-        try {
-            return [System.IO.File]::Open($Path, [System.IO.FileMode]::Open, [System.IO.FileAccess]::Read,
-                                          [System.IO.FileShare]::ReadWrite)
-        } catch {
-            if ($attempt -eq 20) { throw "cannot open $Path for reading: $($_.Exception.Message)" }
-            Start-Sleep -Milliseconds 500
-        }
-    }
 }
 
 function New-Zip {
     param([string]$Source, [string]$Destination, [string[]]$Names)
-    # PowerShell 7 has ZipFile in its shared framework already; the Add-Type lines are for the
-    # shells and self-built runtimes that do not, and are harmless where it is already there.
-    if (-not ("System.IO.Compression.ZipFile" -as [type])) {
-        foreach ($assembly in "System.IO.Compression.ZipFile", "System.IO.Compression",
-                              "System.IO.Compression.FileSystem") {
-            try { Add-Type -AssemblyName $assembly -ErrorAction Stop; break } catch { }
-        }
-    }
-    if (-not ("System.IO.Compression.ZipFile" -as [type])) {
-        throw "no System.IO.Compression.ZipFile available to build $Destination with"
-    }
-    $archive = [System.IO.Compression.ZipFile]::Open($Destination, [System.IO.Compression.ZipArchiveMode]::Create)
-    try {
-        foreach ($name in $Names) {
-            $path = Join-Path $Source $name
-            $entry = $archive.CreateEntry($name, [System.IO.Compression.CompressionLevel]::Optimal)
-            $entryStream = $entry.Open()
-            try {
-                $fileStream = Open-ForRead $path
-                try { $fileStream.CopyTo($entryStream) } finally { $fileStream.Dispose() }
-            } finally {
-                $entryStream.Dispose()
+    # Two ways to build the archive. Compress-Archive is in every PowerShell, and on a 140 MB exe
+    # that was published a second ago it sometimes fails because Windows Defender still has the file
+    # open - so it is retried. tar.exe is bsdtar, which ships with Windows 10 and later and knows
+    # how to write a zip; it is the fallback.
+    foreach ($name in $Names) { Say "  adding $name" "DarkGray" }
+    for ($attempt = 1; $attempt -le 8; $attempt++) {
+        try {
+            if (Test-Path -LiteralPath $Destination) { Remove-Item -LiteralPath $Destination -Force }
+            $paths = @($Names | ForEach-Object { Join-Path $Source $_ })
+            # -LiteralPath only exists in PowerShell 6 and later, and people do run this script from
+            # the Windows PowerShell that is on every desktop, so ask before using it.
+            $params = @{ DestinationPath = $Destination; CompressionLevel = "Optimal" }
+            if ((Get-Command Compress-Archive).Parameters.ContainsKey("LiteralPath")) {
+                $params["LiteralPath"] = $paths
+            } else {
+                $params["Path"] = $paths
             }
-            Say "  + $name"
+            Compress-Archive @params
+            Say "  Compress-Archive done (attempt $attempt)" "DarkGray"
+            return
+        } catch {
+            Say "  Compress-Archive attempt $attempt failed: $($_.Exception.Message)" "DarkGray"
+            Start-Sleep -Milliseconds 1000
         }
-    } finally {
-        $archive.Dispose()
     }
+    if (-not (Get-Command tar.exe -ErrorAction SilentlyContinue)) {
+        throw "no way to write $Destination: Compress-Archive failed and tar.exe is not installed"
+    }
+    $arguments = @("-a", "-c", "-f", $Destination, "-C", $Source, "--") + $Names
+    $code = Invoke-Tool -Exe "tar.exe" -Arguments $arguments
+    if ($code -ne 0 -or -not (Test-Path -LiteralPath $Destination)) { throw "tar.exe failed with exit code $code" }
+    Say "  tar.exe done" "DarkGray"
 }
-
-function Set-LastExitCodeOne { $global:LASTEXITCODE = 1 }
 
 try {
     Set-Location $Root
+    Say "build-win-$Arch $(Get-Date -Format 'o')"
 
     if ($Icons) { & (Join-Path $Root "scripts/make-icons.ps1") }
 
@@ -124,6 +110,7 @@ try {
             throw "$required is missing. Run .\scripts\make-icons.ps1 to generate the icons."
         }
     }
+    Say "required assets present"
 
     if (Test-Path $PublishDir) { Remove-Item -Recurse -Force $PublishDir }
 
@@ -131,33 +118,30 @@ try {
                    "--nologo", "-v", "minimal")
     if ($FrameworkDependent) {
         # -r alone means self-contained in .NET 8, so say otherwise, and keep the csproj's own
-        # PublishSingleFile condition off: a framework-dependent build is a folder of small files.
+        # PublishSingleFile condition off: this build is a folder of small files.
         $arguments += @("--self-contained", "false", "-p:FrameworkDependent=true")
     } else {
         # One file, no runtime to install: the .NET host is packed inside the exe.
         $arguments += @("-p:PublishSingleFile=true", "-p:IncludeNativeLibrariesForSelfExtract=true")
     }
+
     Say "dotnet $($arguments -join ' ')" "DarkGray"
-    $code = Invoke-DotNet -Arguments $arguments
+    $code = Invoke-Tool -Exe "dotnet" -Arguments $arguments
     if ($code -ne 0) { throw "dotnet publish failed with exit code $code" }
 
     $exe = Join-Path $PublishDir "LayoutFixer.exe"
-    if (-not (Test-Path $exe)) { throw "no LayoutFixer.exe in $PublishDir" }
-    $size = [math]::Round((Get-Item $exe).Length / 1MB, 1)
-    Say "built $PublishDir\LayoutFixer.exe ($size MB)" "Green"
+    if (-not (Test-Path -LiteralPath $exe)) { throw "no LayoutFixer.exe in $PublishDir" }
+    Say "built $PublishDir\LayoutFixer.exe ($([math]::Round((Get-Item -LiteralPath $exe).Length / 1MB, 1)) MB)" "Green"
 
     if ($Zip) {
         $zip = Join-Path $BuildDir "LayoutFixer-$Version-win-$Arch.zip"
-        if (Test-Path $zip) { Remove-Item -Force $zip }
+        $names = @("LayoutFixer.exe")
         if ($FrameworkDependent) {
             # A framework-dependent build is a handful of files that belong next to each other.
-            $names = @(Get-ChildItem -Path $PublishDir -File | ForEach-Object { $_.Name })
-            New-Zip -Source $PublishDir -Destination $zip -Names $names
-        } else {
-            # Single file: the zip holds exactly one exe, like the macOS build's zip held one .app.
-            New-Zip -Source $PublishDir -Destination $zip -Names @("LayoutFixer.exe")
+            $names = @(Get-ChildItem -LiteralPath $PublishDir -File | ForEach-Object { $_.Name })
         }
-        Say "built $zip ($([math]::Round((Get-Item $zip).Length / 1MB, 1)) MB)" "Green"
+        New-Zip -Source $PublishDir -Destination $zip -Names $names
+        Say "built $zip ($([math]::Round((Get-Item -LiteralPath $zip).Length / 1MB, 1)) MB)" "Green"
     }
 
     if ($Test) {
@@ -170,8 +154,11 @@ try {
 
     if ($Open) { Start-Process $exe }
 } catch {
-    Say "FAILED: $($_.Exception.ToString())" "Red"
-    if ($_.ScriptStackTrace) { Say "at: $($_.ScriptStackTrace)" "DarkGray" }
-    Set-LastExitCodeOne
+    Say "FAILED: $($_.Exception.Message)" "Red"
+    if ($_.InvocationInfo -and $_.InvocationInfo.PositionMessage) {
+        Say "  $($_.InvocationInfo.PositionMessage)" "DarkGray"
+    }
+    if ($_.ScriptStackTrace) { Say "  stack: $($_.ScriptStackTrace)" "DarkGray" }
+    Say "  transcript: $Transcript" "DarkGray"
     throw
 }
