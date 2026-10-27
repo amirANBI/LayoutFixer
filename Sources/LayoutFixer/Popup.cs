@@ -88,9 +88,10 @@ internal sealed class Popup : Form
         {
             var cp = base.CreateParams;
             cp.ClassStyle |= CS_DROPSHADOW;
+            // WS_EX_LAYERED is what makes WS_EX_TRANSPARENT a real click-through, and a layered
+            // window draws nothing until its attributes are set: see OnHandleCreated.
             cp.ExStyle |= Native.WS_EX_TOPMOST | Native.WS_EX_TOOLWINDOW | Native.WS_EX_NOACTIVATE
                         | Native.WS_EX_TRANSPARENT | Native.WS_EX_LAYERED;
-            cp.Layers = true;
             return cp;
         }
     }
@@ -190,8 +191,9 @@ internal sealed class Popup : Form
     {
         foreach (var c in text)
         {
-            if (c is >= 0x0590 and <= 0x08FF or >= 0xFB1D and <= 0xFEFF) return true;
-            if (char.IsLetter(c)) return false;
+            int code = c;
+            if (code >= 0x0590 && code <= 0x08FF || code >= 0xFB1D && code <= 0xFEFF) return true;
+            if (char.IsLetter(c)) return false;   // the first strong letter decides
         }
         return false;
     }

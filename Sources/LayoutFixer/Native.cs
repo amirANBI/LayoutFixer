@@ -4,6 +4,7 @@
 using System;
 using System.Runtime.InteropServices;
 using System.Text;
+using Microsoft.Win32.SafeHandles;
 
 namespace LayoutFixer;
 
@@ -345,8 +346,9 @@ internal static class Native
     public const uint FILE_TYPE_PIPE = 0x0003;
 
     [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
-    public static extern IntPtr CreateFileW(string fileName, uint desiredAccess, uint shareMode, IntPtr security,
-                                            uint creationDisposition, uint flags, IntPtr templateFile);
+    public static extern SafeFileHandle CreateFileW(string fileName, uint desiredAccess, uint shareMode,
+                                                    IntPtr security, uint creationDisposition, uint flags,
+                                                    IntPtr templateFile);
 
     public static IntPtr FocusOfForegroundWindow()
     {

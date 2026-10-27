@@ -380,7 +380,8 @@ internal static class TestMode
         var handle = Native.CreateFileW("CONOUT$", Native.GENERIC_WRITE,
                                        Native.FILE_SHARE_READ | Native.FILE_SHARE_WRITE,
                                        IntPtr.Zero, Native.OPEN_EXISTING, 0, IntPtr.Zero);
-        if (handle == IntPtr.Zero || handle == new IntPtr(-1)) return Console.Out;
+        if (handle.IsInvalid) return Console.Out;
+        // The FileStream owns the handle from here on, and closes it with the writer.
         return new StreamWriter(new FileStream(handle, FileAccess.Write), new UTF8Encoding(false)) { AutoFlush = true };
     }
 }
