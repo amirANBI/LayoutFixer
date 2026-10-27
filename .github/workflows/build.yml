@@ -52,19 +52,22 @@ jobs:
         if: failure()
         shell: pwsh
         run: |
-          # The build log is not reachable from a fork's UI in every case, and an MSBuild error that
-          # the problem matcher does not know becomes invisible. Re-emit what matters as annotations.
+          # When MSBuild fails with a code the problem matcher does not know, the run looks like an
+          # exit code 1 with nothing to read. The build log is the only thing that explains it, so
+          # push its tail into an annotation (one annotation, lines joined with %0A).
           $logs = Get-ChildItem -Path build -Filter 'publish-win-*.log' -ErrorAction SilentlyContinue
-          if (-not $logs) { "::error::no build log was written: scripts/build.ps1 failed before compiling" }
-          foreach ($log in $logs) {
-            $hits = Select-String -Path $log.FullName -Pattern 'error|failed|Exception|warning [A-Z]+[0-9]+' |
-                    Select-Object -Last 20
-            if (-not $hits) { $hits = Get-Content $log.FullName | Select-Object -Last 12 }
-            foreach ($line in $hits) {
-              $text = if ($line.Line) { $line.Line } else { "$line" }
-              "::error::" + ($log.Name + ": " + $text -replace '%','%25' -replace '[^\x20-\x7E]','?')
-            }
+          if (-not $logs) {
+            "::error::no build log was written: scripts/build.ps1 failed before compiling"
           }
+          foreach ($log in $logs) {
+            $tail = (Get-Content -LiteralPath $log.FullName | Select-Object -Last 45) -join "`n"
+            $tail = $tail -replace '%', '%25'
+            $tail = $tail -replace "`r", ''
+            $tail = $tail -replace "[^\x20-\x7E`n]", '?'
+            "::error::" + $log.Name + " (tail):%0A" + ($tail -replace "`n", '%0A')
+          }
+          Get-ChildItem -Recurse -Path build -ErrorAction SilentlyContinue |
+            ForEach-Object { "::notice::$($_.FullName.Substring($env:GITHUB_WORKSPACE.Length)) ($($_.Length) bytes)" }
 
       - name: upload the zips
         uses: actions/upload-artifact@v4
