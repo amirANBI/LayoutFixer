@@ -1,7 +1,7 @@
 name: build
 
 # One Windows job: build both architectures, run the detector over a sample, keep the zips.
-# Pushing a v* tag turns the same zips into a GitHub release with binaries attached.
+# Pushing a v* tag turns those zips into a GitHub release with the binaries attached.
 
 on:
   push:
@@ -22,8 +22,8 @@ jobs:
         with:
           dotnet-version: "8.x"
 
-      # Each step keeps its own transcript in build\, because a failure in pwsh is otherwise only
-      # visible as "exit code 1" - see the "explain a failed build" step.
+      # Each step keeps a transcript in build\, and "explain a failed build" below annotates it:
+      # a pwsh failure is otherwise only ever visible as "exit code 1".
       - name: build (self-contained, win-x64)
         shell: pwsh
         run: |
@@ -39,23 +39,25 @@ jobs:
       - name: detection smoke test
         shell: pwsh
         run: |
-          # --test prints what the detector decides, without installing a keyboard hook, so this
-          # step proves the dictionaries and the layout tables are really inside the exe. Both
-          # readings checked here are real words, so both have to come back as FIX. The logs go to
-          # build\ so the diagnosis step below has something to show when this fails.
+          # --test prints what the app's own detector decides, with no keyboard hook installed, so
+          # this proves the word lists and the layout tables really are inside the exe. Both
+          # readings checked here are real words, so both have to come back as FIX.
           $exe = Join-Path $PWD "build/publish-win-x64/LayoutFixer.exe"
-          foreach ($case in @(
-              @{ Args = '--test "صشدف فخ لقشذ"'; Expect = "صشدف -> want" },
-              @{ Args = '--test "sghl"';           Expect = "sghl -> سلام" }
-          )) {
-            $caseName = ($case.Expect -replace "[^A-Za-z]", "")
-  $log = Join-Path $PWD "build/step-smoke-$caseName.log"
+          $cases = @()
+          $cases += @{ Args = '--test "صشدف فخ لقشذ"'; Expect = "صشدف -> want"; Name = "persian" }
+          $cases += @{ Args = '--test "sghl"';          Expect = "sghl -> سلام"; Name = "english" }
+          foreach ($case in $cases) {
+            $log = Join-Path $PWD ("build/step-smoke-" + $case.Name + ".log")
             Start-Process -FilePath $exe -ArgumentList $case.Args -NoNewWindow -Wait `
                           -RedirectStandardOutput $log
             $out = Get-Content -LiteralPath $log -Raw
             Write-Host $out
-            if ($out -notmatch [regex]::Escape($case.Expect)) { throw "expected '$($case.Expect)' in $log" }
-            if ($out -cnotmatch "FIX") { throw "no suggestion made for a mistyped word in $log" }
+            if ($out -notmatch [regex]::Escape($case.Expect)) {
+              throw "expected '$($case.Expect)' in $($case.Name) test"
+            }
+            if ($out -cnotmatch "FIX") {
+              throw "no suggestion made for a mistyped word in $($case.Name) test"
+            }
           }
 
       - name: the zips are there
@@ -65,21 +67,21 @@ jobs:
             "artifact $($_.Name) $([math]::Round($_.Length / 1MB, 1)) MB"
           }
           foreach ($arch in "x64", "arm64") {
-            if (-not (Get-ChildItem "build/LayoutFixer-*-win-$arch.zip" -ErrorAction SilentlyContinue)) {
-              throw "no $arch zip was produced"
-            }
+            $found = Get-ChildItem "build/LayoutFixer-*-win-$arch.zip" -ErrorAction SilentlyContinue
+            if (-not $found) { throw "no $arch zip was produced" }
           }
 
       - name: explain a failed build
         if: failure()
         shell: pwsh
         run: |
-          # Whatever failed, its own words are in build/step-*.log; annotate the tail so the run is
-          # readable without opening the raw log, and list what the build directory ended up with.
-          # -Include needs a wildcard in -Path to apply at all, so filter by name instead.
-          $logs = @(Get-ChildItem -Path build -File -Recurse -ErrorAction SilentlyContinue |
-          Where-Object { $_.Name -like '*.log' })
-          if (-not $logs) { "::error::no step log was written: the shell could not even start the script" }
+          # Whatever failed, its own words are in build\*.log. -Include would need a wildcard in
+          # -Path to apply at all, so the names are filtered afterwards.
+          $logs = Get-ChildItem -Path build -File -Recurse -ErrorAction SilentlyContinue |
+                  Where-Object { $_.Name -like "*.log" }
+          if (-not $logs) {
+            "::error::no build log was written: scripts/build.ps1 never got to compile anything"
+          }
           foreach ($log in $logs) {
             $tail = (Get-Content -LiteralPath $log.FullName | Select-Object -Last 40) -join "`n"
             $tail = ($tail -replace "%", "%25") -replace "`r", ""
@@ -96,6 +98,7 @@ jobs:
           name: layoutfixer-windows
           path: build/LayoutFixer-*.zip
           if-no-files-found: error
+          retention-days: 90
 
   release:
     name: release
@@ -117,4 +120,4 @@ jobs:
         run: |
           gh release create "$GITHUB_REF_NAME" dist/* \
             --title "LayoutFixer $GITHUB_REF_NAME for Windows" \
-            --notes "LayoutFixer for Windows: fixes English and Persian keyboard layout mistakes while you type. Unzip, run LayoutFixer.exe, and press Tab when the popup appears. Self-contained: no .NET installation needed. Not Authenticode-signed yet, so Windows may ask before running it."
+            --notes "LayoutFixer for Windows: fixes English and Persian keyboard layout mistakes while you type. Unzip, run LayoutFixer.exe, and press Tab when the popup appears. Self-contained, so there is no .NET runtime to install. Not Authenticode-signed yet, so Windows may ask before running it."
