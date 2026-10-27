@@ -134,14 +134,16 @@ try {
     Say "built $PublishDir\LayoutFixer.exe ($([math]::Round((Get-Item -LiteralPath $exe).Length / 1MB, 1)) MB)" "Green"
 
     if ($Zip) {
-        $zip = Join-Path $BuildDir "LayoutFixer-$Version-win-$Arch.zip"
+        # $zipPath, not $zip: PowerShell variable names are case-insensitive, so assigning $zip
+        # would set the [switch]$Zip parameter, and a string does not convert to a switch.
+        $zipPath = Join-Path $BuildDir "LayoutFixer-$Version-win-$Arch.zip"
         $names = @("LayoutFixer.exe")
         if ($FrameworkDependent) {
             # A framework-dependent build is a handful of files that belong next to each other.
             $names = @(Get-ChildItem -LiteralPath $PublishDir -File | ForEach-Object { $_.Name })
         }
-        New-Zip -Source $PublishDir -Destination $zip -Names $names
-        Say "built $zip ($([math]::Round((Get-Item -LiteralPath $zip).Length / 1MB, 1)) MB)" "Green"
+        New-Zip -Source $PublishDir -Destination $zipPath -Names $names
+        Say "built $zipPath ($([math]::Round((Get-Item -LiteralPath $zipPath).Length / 1MB, 1)) MB)" "Green"
     }
 
     if ($Test) {
