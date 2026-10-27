@@ -89,7 +89,7 @@ function New-Zip {
         }
     }
     if (-not (Get-Command tar.exe -ErrorAction SilentlyContinue)) {
-        throw "no way to write $Destination: Compress-Archive failed and tar.exe is not installed"
+        throw "no way to write ${Destination}: Compress-Archive failed and tar.exe is not installed"
     }
     $arguments = @("-a", "-c", "-f", $Destination, "-C", $Source, "--") + $Names
     $code = Invoke-Tool -Exe "tar.exe" -Arguments $arguments

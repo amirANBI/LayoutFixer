@@ -22,6 +22,26 @@ jobs:
         with:
           dotnet-version: "8.x"
 
+      - name: parse the scripts
+        shell: pwsh
+        run: |
+          # A parse error in build.ps1 kills the step before it can write a single line of output,
+          # which is the worst failure to read in a log you cannot open - PowerShell reads the whole
+          # file first, so one bad string interpolation means total silence. Check it here instead.
+          $bad = 0
+          foreach ($file in (Get-ChildItem scripts -Filter *.ps1)) {
+            $tokens = $null
+            $parseErrors = $null
+            $null = [System.Management.Automation.Language.Parser]::ParseFile($file.FullName,
+                      [ref]$tokens, [ref]$parseErrors)
+            foreach ($e in $parseErrors) {
+              $bad++
+              "::error::$($file.Name) line $($e.Extent.StartLineNumber): $($e.Message)"
+            }
+            if (-not $parseErrors) { "::notice::$($file.Name) parses clean" }
+          }
+          if ($bad) { exit 1 }
+
       # Each step keeps a transcript in build\, and "explain a failed build" below annotates it:
       # a pwsh failure is otherwise only ever visible as "exit code 1".
       - name: build (self-contained, win-x64)
