@@ -26,12 +26,14 @@ jobs:
       # visible as "exit code 1" - see the "explain a failed build" step.
       - name: build (self-contained, win-x64)
         shell: pwsh
-        run: New-Item -ItemType Directory -Force build | Out-Null
+        run: |
+          New-Item -ItemType Directory -Force build | Out-Null
           ./scripts/build.ps1 -Zip *>&1 | Tee-Object -FilePath build/step-x64.log
 
       - name: build (win-arm64)
         shell: pwsh
-        run: New-Item -ItemType Directory -Force build | Out-Null
+        run: |
+          New-Item -ItemType Directory -Force build | Out-Null
           ./scripts/build.ps1 -Arch arm64 -Zip *>&1 | Tee-Object -FilePath build/step-arm64.log
 
       - name: detection smoke test
@@ -46,7 +48,7 @@ jobs:
               @{ Args = '--test "صشدف فخ لقشذ"'; Expect = "صشدف -> want" },
               @{ Args = '--test "sghl"';           Expect = "sghl -> سلام" }
           )) {
-            $log = "build/step-smoke-" + ($case.Expect -replace "[^A-Za-z]", "") + ".log"
+            $log = Join-Path $PWD "build/step-smoke-" + ($case.Expect -replace "[^A-Za-z]", "") + ".log"
             Start-Process -FilePath $exe -ArgumentList $case.Args -NoNewWindow -Wait `
                           -RedirectStandardOutput $log
             $out = Get-Content -LiteralPath $log -Raw
@@ -73,7 +75,9 @@ jobs:
         run: |
           # Whatever failed, its own words are in build/step-*.log; annotate the tail so the run is
           # readable without opening the raw log, and list what the build directory ended up with.
-          $logs = Get-ChildItem -Path build -Include "step-*.log", "publish-win-*.log", "step-smoke-*.log" -File -ErrorAction SilentlyContinue
+          # -Include needs a wildcard in -Path to apply at all, so filter by name instead.
+$logs = @(Get-ChildItem -Path build -File -Recurse -ErrorAction SilentlyContinue |
+          Where-Object { $_.Name -like '*.log' })
           if (-not $logs) { "::error::no step log was written: the shell could not even start the script" }
           foreach ($log in $logs) {
             $tail = (Get-Content -LiteralPath $log.FullName | Select-Object -Last 40) -join "`n"
