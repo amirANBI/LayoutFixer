@@ -221,6 +221,9 @@ internal sealed class Fixer : IDisposable
                 _run.Add(space);
             }
             _run.AddRange(finished);
+            // The space just pressed belongs to the run too: the app will insert it, so the fix has
+            // to delete it and type it back, or the word ends up in front of a stray space.
+            _run.Add(space);
             _runLayoutId = current.Id;
             _runWords = 1;
             RefreshPopup();

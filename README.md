@@ -35,7 +35,9 @@ No installation of a runtime, no administrator rights, no permission dialogs: yo
 ## Features
 
 - Works in every app: browsers, chat apps, editors, mail, terminals.
-- Asks before changing anything. <kbd>Tab</kbd> fixes it, <kbd>Esc</kbd> (or just keep typing) ignores it.
+- Asks before changing anything. <kbd>Tab</kbd> fixes it; <kbd>Esc</kbd>, an arrow key, a click or a
+  window change ignores it. Typing on just adds those words to the offer, so you can finish the
+  sentence and fix all of it at once.
 - Fixes the whole run of wrong words, not just the last one.
 - Switches the active input language (the same thing <kbd>Win</kbd>+<kbd>Space</kbd> does), so the
   next words come out right.
